@@ -35,7 +35,8 @@ import com.kosd.log_inattendancesafeguard.viewmodel.AuthViewModel
 fun LoginScreen(
     viewModel: AuthViewModel,
     orgViewModel: com.kosd.log_inattendancesafeguard.viewmodel.OrganizationViewModel,
-    onNavigateToRegister: () -> Unit
+    onNavigateToRegister: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit = {}
 ) {
     var email          by remember { mutableStateOf("") }
     var password       by remember { mutableStateOf("") }
@@ -224,6 +225,18 @@ fun LoginScreen(
                             } else {
                                 Text("Sign In", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                             }
+                        }
+
+                        TextButton(
+                            onClick = onNavigateToForgotPassword,
+                            modifier = Modifier.fillMaxWidth(),
+                            contentPadding = PaddingValues(vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Forgot Password?",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
 
                         Row(

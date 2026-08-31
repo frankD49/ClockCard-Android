@@ -50,6 +50,16 @@
 
                 <data android:scheme="clockcard" android:host="auth-callback" />
             </intent-filter>
+
+            <!-- Deep link for password reset: clockcard://password-reset -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="clockcard" android:host="password-reset" />
+            </intent-filter>
         </activity>
 
         <provider

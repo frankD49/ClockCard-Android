@@ -44,9 +44,10 @@ class MainActivity : FragmentActivity() {
     }
 
     /**
-     * Routes clockcard://auth-callback deep links:
-     * - ?token=xxx → Resend confirmation flow (verify-signup Edge Function)
-     * - ?code=xxx  → Legacy Supabase Auth callback (SDK handles session import)
+     * Routes clockcard:// deep links:
+     * - auth-callback?token=xxx → Resend signup confirmation (verify-signup Edge Function)
+     * - auth-callback?code=xxx  → Legacy Supabase Auth callback (SDK handles session import)
+     * - password-reset?token=xxx → Resend password reset (verify-password-reset Edge Function)
      */
     private fun handleAuthDeepLink(intent: android.content.Intent?) {
         val data = intent?.data ?: return
@@ -67,6 +68,18 @@ class MainActivity : FragmentActivity() {
             // Fall back to Supabase SDK for legacy ?code= links
             client.handleDeeplinks(safeIntent)
             return
+        }
+
+        if (data.scheme == "clockcard" && data.host == "password-reset") {
+            val token = data.getQueryParameter("token")
+            if (!token.isNullOrBlank()) {
+                val authViewModel = ViewModelProvider(
+                    this,
+                    AuthViewModel.Factory()
+                )[AuthViewModel::class.java]
+                authViewModel.handlePasswordResetToken(token)
+                return
+            }
         }
 
         // Non-auth deep links (e.g. clockcard://e/...) — let SDK handle

@@ -250,6 +250,88 @@ class AuthRepository {
         Result.Success(Unit)
     }.getOrElse { Result.Error(it.toErrorMessage()) }
 
+    /**
+     * Requests a password reset email via Resend.
+     * Calls the send-email Edge Function with type "password_reset".
+     * Always returns success (even if email doesn't exist) to prevent
+     * email enumeration.
+     */
+    suspend fun requestPasswordReset(email: String): Result<Unit> = runCatching {
+        val url = URL("${BuildConfig.SUPABASE_URL}/functions/v1/send-email")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = "POST"
+        conn.setRequestProperty("Content-Type", "application/json")
+        conn.setRequestProperty("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        conn.doOutput = true
+
+        val context = buildJsonObject {
+            put("deepLinkScheme", "clockcard://password-reset")
+        }
+
+        val body = buildJsonObject {
+            put("type", "password_reset")
+            put("email", email)
+            put("context", context)
+        }.toString()
+        conn.outputStream.use { it.write(body.toByteArray()) }
+
+        val responseCode = conn.responseCode
+        val responseBody = if (responseCode in 200..299) {
+            conn.inputStream.bufferedReader().use { it.readText() }
+        } else {
+            conn.errorStream?.bufferedReader()?.use { it.readText() } ?: ""
+        }
+        conn.disconnect()
+
+        val json = kotlinx.serialization.json.Json.parseToJsonElement(responseBody).jsonObject
+        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
+        val message = json["message"]?.jsonPrimitive?.contentOrNull
+
+        if (!success) {
+            return@runCatching Result.Error(message ?: "Failed to send reset email")
+        }
+
+        Result.Success(Unit)
+    }.getOrElse { Result.Error(it.toErrorMessage()) }
+
+    /**
+     * Verifies a password reset token and sets the new password.
+     * Calls the verify-password-reset Edge Function.
+     * Returns the user's email on success, null on failure.
+     */
+    suspend fun verifyPasswordReset(token: String, newPassword: String): String? = runCatching {
+        val url = URL("${BuildConfig.SUPABASE_URL}/functions/v1/verify-password-reset")
+        val conn = url.openConnection() as HttpURLConnection
+        conn.requestMethod = "POST"
+        conn.setRequestProperty("Content-Type", "application/json")
+        conn.setRequestProperty("Authorization", "Bearer ${BuildConfig.SUPABASE_ANON_KEY}")
+        conn.doOutput = true
+
+        val body = buildJsonObject {
+            put("token", token)
+            put("password", newPassword)
+        }.toString()
+        conn.outputStream.use { it.write(body.toByteArray()) }
+
+        val responseCode = conn.responseCode
+        if (responseCode !in 200..299) {
+            conn.errorStream?.bufferedReader()?.use { it.readText() }
+            conn.disconnect()
+            return@runCatching null
+        }
+
+        val responseBody = conn.inputStream.bufferedReader().use { it.readText() }
+        conn.disconnect()
+
+        val json = kotlinx.serialization.json.Json.parseToJsonElement(responseBody).jsonObject
+        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
+        if (success) {
+            json["email"]?.jsonPrimitive?.contentOrNull
+        } else {
+            null
+        }
+    }.getOrNull()
+
     suspend fun logout(): Result<Unit> = runCatching {
         client.auth.signOut()
         Result.Success(Unit)
