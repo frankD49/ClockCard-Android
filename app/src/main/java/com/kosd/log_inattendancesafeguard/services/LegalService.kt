@@ -108,7 +108,7 @@ This Privacy Policy describes how KOSD ("we", "us", or "our") collects, uses, an
 - Objection: You can object to certain processing activities.
 - Withdrawal of consent: You can withdraw location consent at any time without affecting the legality of prior processing.
 
-To exercise these rights, contact your organization administrator or email privacy@attendanceguard.app.
+To exercise these rights, contact your organization administrator or email admin@kosdllp.com.
 
 7. DATA SECURITY
 
@@ -131,7 +131,7 @@ We may update this Privacy Policy from time to time. We will notify you of mater
 
 11. CONTACT
 
-For privacy questions or requests, contact: privacy@attendanceguard.app
+For privacy questions or requests, contact: admin@kosdllp.com
         """.trimIndent()
     )
 
@@ -217,7 +217,7 @@ We may update these Terms from time to time. We will notify you of material chan
 
 14. CONTACT
 
-For questions about these Terms, contact: legal@attendanceguard.app
+For questions about these Terms, contact: admin@kosdllp.com
         """.trimIndent()
     )
 
@@ -309,7 +309,7 @@ We may update this DPA from time to time to reflect changes in legal requirement
 
 7. CONTACT
 
-For questions about this DPA, contact: privacy@attendanceguard.app
+For questions about this DPA, contact: admin@kosdllp.com
         """.trimIndent()
     )
 
@@ -368,7 +368,7 @@ Each subprocessor must:
 
 5. CONTACT
 
-For questions about subprocessors, contact: privacy@attendanceguard.app
+For questions about subprocessors, contact: admin@kosdllp.com
         """.trimIndent()
     )
 
@@ -405,7 +405,7 @@ This Refund & Cancellation Policy applies to subscriptions purchased through the
 4. BILLING DISPUTES
 
 4.1 If you believe you have been charged in error, first contact Apple or Google (depending on where you purchased the subscription).
-4.2 If the store is unable to resolve the issue, contact us at billing@attendanceguard.app with your purchase receipt and a description of the issue. We will assist you in resolving the dispute with the store.
+4.2 If the store is unable to resolve the issue, contact us at admin@kosdllp.com with your purchase receipt and a description of the issue. We will assist you in resolving the dispute with the store.
 
 5. FREE TRIALS
 
@@ -419,7 +419,7 @@ We may update this Refund & Cancellation Policy from time to time. We will notif
 
 7. CONTACT
 
-For billing questions, contact: billing@attendanceguard.app
+For billing questions, contact: admin@kosdllp.com
         """.trimIndent()
     )
 
@@ -458,7 +458,7 @@ KOSD is committed to making the ClockCard and Eventa mobile applications (the "S
 
 4. FEEDBACK AND REPORTING
 
-4.1 If you encounter an accessibility barrier or have suggestions for improvement, please contact us at accessibility@attendanceguard.app. Include a description of the issue, the device and OS version you are using, and the screen where the issue occurred.
+4.1 If you encounter an accessibility barrier or have suggestions for improvement, please contact us at admin@kosdllp.com. Include a description of the issue, the device and OS version you are using, and the screen where the issue occurred.
 4.2 We acknowledge accessibility feedback within 5 business days and strive to resolve reported issues in a future update.
 
 5. ONGOING EFFORTS
@@ -473,7 +473,7 @@ We may update this Accessibility Statement as we improve the accessibility of ou
 
 7. CONTACT
 
-For accessibility questions or feedback, contact: accessibility@attendanceguard.app
+For accessibility questions or feedback, contact: admin@kosdllp.com
         """.trimIndent()
     )
 }
