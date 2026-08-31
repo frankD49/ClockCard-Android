@@ -1,0 +1,76 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Left C (opens right) — centered in 108 viewport, safe zone ~18-90 -->
+    <!-- Outer arc radius ~24, inner arc radius ~17, centered at y=54 -->
+    <!-- Left C center x ~38 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,30
+            A24,24 0 1,0 38,78
+            L38,71
+            A17,17 0 1,1 38,37
+            Z" />
+
+    <!-- Right C (opens left) — center x ~70 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,30
+            A24,24 0 1,1 70,78
+            L70,71
+            A17,17 0 1,0 70,37
+            Z" />
+
+    <!-- Clock face circle — center (54,54), radius 11 -->
+    <path
+        android:fillColor="#4C1D95"
+        android:pathData="M54,43
+            A11,11 0 1,1 54,65
+            A11,11 0 1,1 54,43
+            Z" />
+
+    <!-- Clock markers: 12, 3, 6, 9 -->
+    <path android:fillColor="#FFFFFF" android:pathData="M54,46 a1.5,1.5 0 1,0 0.01,0 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M62,54 a1.5,1.5 0 1,0 0.01,0 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M54,62 a1.5,1.5 0 1,0 0.01,0 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M46,54 a1.5,1.5 0 1,0 0.01,0 Z" />
+
+    <!-- Hour hand (pointing to ~2 o'clock) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L59,49" />
+
+    <!-- Minute hand (pointing to ~10 o'clock) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M54,54 L49,49" />
+
+    <!-- Center dot -->
+    <path android:fillColor="#FFFFFF" android:pathData="M54,54 a1,1 0 1,0 0.01,0 Z" />
+
+    <!-- Checkmark badge — bottom right, center ~(74,74), radius 5.5 -->
+    <path
+        android:fillColor="#2DD4BF"
+        android:pathData="M74,68.5
+            A5.5,5.5 0 1,1 74,79.5
+            A5.5,5.5 0 1,1 74,68.5
+            Z" />
+
+    <!-- Checkmark inside badge -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M71.5,74 L73.5,76 L77,72.5" />
+</vector>

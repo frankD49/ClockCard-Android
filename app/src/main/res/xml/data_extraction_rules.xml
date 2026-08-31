@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   ClockCard data extraction rules (Android 12+).
+
+   Same exclusions as backup_rules.xml — applied to both cloud backup
+   and device-to-device transfer.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <!-- Supabase Auth session (JWT tokens) -->
+        <exclude domain="sharedpref" path="supabase_auth_session.xml"/>
+        <exclude domain="sharedpref" path="io.github.jan.supabase.shared_preferences.xml"/>
+
+        <!-- Offline check-in queue (contains attendee names/emails) -->
+        <exclude domain="file" path="offline_check_in_queue/"/>
+
+        <!-- DataStore preferences -->
+        <exclude domain="file" path="datastore/"/>
+
+        <!-- OSMDroid tile cache -->
+        <exclude domain="file" path="osmdroid/"/>
+    </cloud-backup>
+    <device-transfer>
+        <!-- Auth tokens should not transfer to a new device -->
+        <exclude domain="sharedpref" path="supabase_auth_session.xml"/>
+        <exclude domain="sharedpref" path="io.github.jan.supabase.shared_preferences.xml"/>
+
+        <!-- Offline check-in queue is device-specific -->
+        <exclude domain="file" path="offline_check_in_queue/"/>
+    </device-transfer>
+</data-extraction-rules>

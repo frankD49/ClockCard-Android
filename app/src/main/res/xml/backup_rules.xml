@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   ClockCard backup rules — exclude sensitive data from auto-backup.
+
+   Supabase auth tokens, offline check-in queues, and billing state
+   should never be backed up to Google Drive or transferred to a new
+   device, as they contain user credentials and PII.
+-->
+<full-backup-content>
+    <!-- Supabase Auth session (JWT tokens) -->
+    <exclude domain="sharedpref" path="supabase_auth_session.xml"/>
+    <exclude domain="sharedpref" path="io.github.jan.supabase.shared_preferences.xml"/>
+
+    <!-- Offline check-in queue (contains attendee names/emails) -->
+    <exclude domain="file" path="offline_check_in_queue/"/>
+
+    <!-- DataStore preferences (may contain cached org data) -->
+    <exclude domain="file" path="datastore/"/>
+
+    <!-- OSMDroid tile cache (not sensitive, but large and device-specific) -->
+    <exclude domain="file" path="osmdroid/"/>
+</full-backup-content>
