@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.android.billingclient.api.ProductDetails
 import com.kosd.log_inattendancesafeguard.ClockCardApp
+import com.kosd.log_inattendancesafeguard.models.Organization
 import com.kosd.log_inattendancesafeguard.models.PopulationTier
 import com.kosd.log_inattendancesafeguard.network.SupabaseClientProvider.client
 import com.kosd.log_inattendancesafeguard.services.BillingService
@@ -19,13 +20,16 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.time.Duration
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 
 /**
  * Surfaces in-app billing state to Compose.
  *
- * Free features (PopulationTier.UNDER_10) are always entitled. Paid features —
- * including CSV export / printing — require an active subscription whose
- * product ID matches the desired tier.
+ * There is no free tier — all tiers require a subscription. New orgs get a
+ * 7-day trial at Basic level (based on org created_at). After the trial,
+ * features are locked until a subscription is purchased.
  */
 class BillingViewModel(
     app: ClockCardApp,
@@ -43,25 +47,45 @@ class BillingViewModel(
     var lastError by mutableStateOf<String?>(null)
         private set
 
+    companion object {
+        private const val TRIAL_DAYS = 7L
+    }
+
     /**
-     * The set of tiers the current user has unlocked. Free tier is always included.
-     * Paid tiers are unlocked when the corresponding subscription is owned.
+     * Returns true if the org is still within its 7-day trial period.
+     * Based on the org's created_at timestamp.
+     */
+    fun isTrialActive(org: Organization?): Boolean {
+        val createdAt = org?.createdAt ?: return false
+        return try {
+            val created = OffsetDateTime.parse(createdAt, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            val now = OffsetDateTime.now()
+            Duration.between(created, now).toDays() < TRIAL_DAYS
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * The set of tiers the current user has unlocked via active subscriptions.
+     * During the trial period, Basic is also included.
      */
     val unlockedTiers: Set<PopulationTier>
         get() = buildSet {
-            add(PopulationTier.UNDER_10)
+            if (isTrialActive(orgViewModel?.activeOrg)) {
+                add(PopulationTier.BASIC)
+            }
             PopulationTier.values().forEach { tier ->
-                val pid = tier.productId
-                if (pid != null && pid in purchasedProductIds) add(tier)
+                if (tier.productId in purchasedProductIds) add(tier)
             }
         }
 
-    /** True if the user has any paid subscription and may export/print CSV. */
+    /** True if the user has any active subscription (or trial) and may export/print CSV. */
     val canExport: Boolean
-        get() = unlockedTiers.any { !it.isFree }
+        get() = unlockedTiers.isNotEmpty()
 
     init {
-        val productIds = PopulationTier.values().mapNotNull { it.productId }
+        val productIds = PopulationTier.values().map { it.productId }
         billing.startConnection(productIds)
 
         // Sync purchases to the Supabase backend as they come in
@@ -85,7 +109,7 @@ class BillingViewModel(
     fun isUnlocked(tier: PopulationTier): Boolean = tier in unlockedTiers
 
     fun priceText(tier: PopulationTier): String {
-        val pid = tier.productId ?: return "Free"
+        val pid = tier.productId
         val details = productDetails[pid] ?: return "—"
         return details.subscriptionOfferDetails
             ?.firstOrNull()
@@ -98,9 +122,7 @@ class BillingViewModel(
 
     /** Begin Play Billing purchase for [tier]. */
     fun purchase(activity: Activity, tier: PopulationTier) {
-        val pid = tier.productId
-        if (pid == null) { lastError = "${tier.displayName} is free — no purchase needed."; return }
-        val err = billing.launchPurchase(activity, pid)
+        val err = billing.launchPurchase(activity, tier.productId)
         if (err != null) lastError = err
     }
 

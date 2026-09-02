@@ -132,14 +132,14 @@ fun OrgSettingsScreen(
                     fontSize = 13.sp
                 )
                 Text(
-                    "Free tier (< 10) is the default. Higher tiers unlock CSV export and printing.",
+                    "All tiers require a subscription. New orgs get a 7-day Basic trial.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 TierSelector(
                     selected = populationTier,
                     onSelect = { tier ->
-                        if (tier.isFree || billingViewModel.isUnlocked(tier)) {
+                        if (billingViewModel.isUnlocked(tier)) {
                             populationTier = tier
                         }
                     },
@@ -148,9 +148,9 @@ fun OrgSettingsScreen(
 
                 Button(
                     onClick = {
-                        // Guard: don't save a paid tier the user hasn't purchased.
-                        val tierToSave = if (populationTier.isFree || billingViewModel.isUnlocked(populationTier))
-                            populationTier else PopulationTier.FREE
+                        // Guard: don't save a tier the user hasn't unlocked.
+                        val tierToSave = if (billingViewModel.isUnlocked(populationTier))
+                            populationTier else PopulationTier.DEFAULT
                         orgViewModel.updateOrganization(
                             safeOrgId,
                             OrganizationUpdateRequest(
@@ -619,7 +619,6 @@ fun SubscriptionSection(billingViewModel: BillingViewModel) {
         Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Available plans", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             PopulationTier.values().forEach { tier ->
-                if (tier.isFree) return@forEach
                 val unlocked = billingViewModel.isUnlocked(tier)
                 Row(
                     modifier = Modifier

@@ -90,54 +90,48 @@ enum class AttendanceFrequency(val value: String) {
 
 @Serializable
 enum class PopulationTier(val value: String) {
-    // Legacy aliases (`under_20`, `20_50`, `over_500`) are accepted via @JsonNames so
-    // rows from the previous schema deserialize without crashing the org load.
-    @SerialName("under_10")        @JsonNames("under_20")  UNDER_10("under_10"),
-    @SerialName("10_50")           @JsonNames("20_50")     T_10_50("10_50"),
-    @SerialName("50_100")          T_50_100("50_100"),
-    @SerialName("100_500")         T_100_500("100_500"),
-    @SerialName("500_1000")        @JsonNames("over_500")  T_500_1000("500_1000"),
-    @SerialName("1000_10000")      T_1K_10K("1000_10000"),
-    @SerialName("10000_100000")    T_10K_100K("10000_100000"),
-    @SerialName("100000_1000000")  T_100K_1M("100000_1000000"),
-    @SerialName("over_1000000")    T_OVER_1M("over_1000000");
+    // Legacy aliases accepted via @JsonNames so old rows deserialize without crashing.
+    @SerialName("basic")   @JsonNames("under_10", "under_20", "10_50", "20_50")  BASIC("basic"),
+    @SerialName("bronze")  @JsonNames("50_100")                                BRONZE("bronze"),
+    @SerialName("silver")  @JsonNames("100_500")                               SILVER("silver"),
+    @SerialName("gold")    @JsonNames("500_1000", "over_500",
+                                      "1000_10000", "10000_100000",
+                                      "100000_1000000", "over_1000000")          GOLD("gold");
 
     val displayName: String
         get() = when (this) {
-            UNDER_10    -> "< 10 (Free)"
-            T_10_50     -> "10 – 50"
-            T_50_100    -> "50 – 100"
-            T_100_500   -> "100 – 500"
-            T_500_1000  -> "500 – 1,000"
-            T_1K_10K    -> "1,000 – 10,000"
-            T_10K_100K  -> "10,000 – 100,000"
-            T_100K_1M   -> "100,000 – 1,000,000"
-            T_OVER_1M   -> "> 1,000,000"
+            BASIC   -> "Basic (0 – 50)"
+            BRONZE  -> "Bronze (51 – 100)"
+            SILVER  -> "Silver (101 – 500)"
+            GOLD    -> "Gold (501 – 1,000)"
         }
 
-    /** True for the free tier; paid tiers require an in-app purchase to activate. */
-    val isFree: Boolean get() = this == UNDER_10
+    /** All tiers are paid — no free tier exists. */
+    val isFree: Boolean get() = false
 
     /**
      * Google Play product/subscription ID associated with this tier.
      * Configure these in the Play Console as subscriptions.
-     * Free tier returns null since no purchase is required.
      */
-    val productId: String?
+    val productId: String
         get() = when (this) {
-            UNDER_10    -> null
-            T_10_50     -> "tier_10_50"
-            T_50_100    -> "tier_50_100"
-            T_100_500   -> "tier_100_500"
-            T_500_1000  -> "tier_500_1000"
-            T_1K_10K    -> "tier_1k_10k"
-            T_10K_100K  -> "tier_10k_100k"
-            T_100K_1M   -> "tier_100k_1m"
-            T_OVER_1M   -> "tier_over_1m"
+            BASIC   -> "tier_basic"
+            BRONZE  -> "tier_bronze"
+            SILVER  -> "tier_silver"
+            GOLD    -> "tier_gold"
+        }
+
+    /** Maximum members allowed for this tier. */
+    val maxMembers: Int
+        get() = when (this) {
+            BASIC   -> 50
+            BRONZE  -> 100
+            SILVER  -> 500
+            GOLD    -> 1000
         }
 
     companion object {
-        val FREE: PopulationTier = UNDER_10
+        val DEFAULT: PopulationTier = BASIC
     }
 }
 
@@ -201,7 +195,7 @@ data class Organization(
     @SerialName("is_active")            val isActive: Boolean = true,
     @SerialName("max_members")          val maxMembers: Int = 100,
     @SerialName("subscription_tier")    val subscriptionTier: String = "basic",
-    @SerialName("population_tier")      val populationTier: PopulationTier = PopulationTier.UNDER_10,
+    @SerialName("population_tier")      val populationTier: PopulationTier = PopulationTier.BASIC,
     @SerialName("member_count")         val memberCount: Int? = null,
     @SerialName("created_by")           val createdBy: String? = null,
     @SerialName("data_retention_days")  val dataRetentionDays: Int? = null,
@@ -215,8 +209,8 @@ data class OrganizationCreateRequest(
     val slug: String,
     val description: String? = null,
     val timezone: String = "UTC",
-    @SerialName("max_members") val maxMembers: Int = 100,
-    @SerialName("population_tier") val populationTier: PopulationTier = PopulationTier.UNDER_10
+    @SerialName("max_members") val maxMembers: Int = 50,
+    @SerialName("population_tier") val populationTier: PopulationTier = PopulationTier.BASIC
 )
 
 @Serializable

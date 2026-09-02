@@ -158,17 +158,12 @@ class OrganizationViewModel(private val repository: OrganizationRepository) : Vi
     ): Organization? {
         isLoading = true
         val slug = name.trim().lowercase().replace(Regex("[^a-z0-9]+"), "-")
-        val resolvedMax = maxMembers ?: 100
+        val resolvedMax = maxMembers ?: 50
         val populationTier = when {
-            resolvedMax <= 10      -> PopulationTier.UNDER_10
-            resolvedMax <= 50      -> PopulationTier.T_10_50
-            resolvedMax <= 100     -> PopulationTier.T_50_100
-            resolvedMax <= 500     -> PopulationTier.T_100_500
-            resolvedMax <= 1000    -> PopulationTier.T_500_1000
-            resolvedMax <= 10000   -> PopulationTier.T_1K_10K
-            resolvedMax <= 100000  -> PopulationTier.T_10K_100K
-            resolvedMax <= 1000000 -> PopulationTier.T_100K_1M
-            else -> PopulationTier.T_OVER_1M
+            resolvedMax <= 50      -> PopulationTier.BASIC
+            resolvedMax <= 100     -> PopulationTier.BRONZE
+            resolvedMax <= 500     -> PopulationTier.SILVER
+            else                   -> PopulationTier.GOLD
         }
         val result = repository.createOrganization(
             OrganizationCreateRequest(
