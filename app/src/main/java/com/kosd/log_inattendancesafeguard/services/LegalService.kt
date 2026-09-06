@@ -21,7 +21,8 @@ data class LegalDocument(
     val title: String,
     val version: String,
     val lastUpdated: String,
-    val body: String
+    val body: String,
+    val url: String
 )
 
 object LegalService {
@@ -33,10 +34,20 @@ object LegalService {
     const val REFUND_POLICY_VERSION = "1.0"
     const val ACCESSIBILITY_STATEMENT_VERSION = "1.0"
 
+    // Hosted legal document URLs (clockcard-eventa.kosdllp.com)
+    const val PRIVACY_POLICY_URL = "https://clockcard-eventa.kosdllp.com"
+    const val TERMS_OF_SERVICE_URL = "https://clockcard-eventa.kosdllp.com/terms.html"
+    const val MONITORING_NOTICE_URL = "https://clockcard-eventa.kosdllp.com/monitoring.html"
+    const val DPA_URL = "https://clockcard-eventa.kosdllp.com/addendum.html"
+    const val SUBPROCESSOR_DISCLOSURE_URL = "https://clockcard-eventa.kosdllp.com/disclosure.html"
+    const val REFUND_POLICY_URL = "https://clockcard-eventa.kosdllp.com/refund.html"
+    const val ACCESSIBILITY_STATEMENT_URL = "https://clockcard-eventa.kosdllp.com/laccessibility.html"
+
     val privacyPolicy = LegalDocument(
         title = "Privacy Policy",
         version = PRIVACY_POLICY_VERSION,
         lastUpdated = "August 21, 2026",
+        url = PRIVACY_POLICY_URL,
         body = """
 Last updated: August 21, 2026
 
@@ -139,6 +150,7 @@ For privacy questions or requests, contact: admin@kosdllp.com
         title = "Terms of Service",
         version = TERMS_OF_SERVICE_VERSION,
         lastUpdated = "August 21, 2026",
+        url = TERMS_OF_SERVICE_URL,
         body = """
 Last updated: August 21, 2026
 
@@ -260,6 +272,7 @@ By continuing to use ClockCard or Eventa as a member of this organization, you a
         title = "Data Processing Addendum",
         version = DPA_VERSION,
         lastUpdated = "August 21, 2026",
+        url = DPA_URL,
         body = """
 Last updated: August 21, 2026
 
@@ -319,6 +332,7 @@ For questions about this DPA, contact: admin@kosdllp.com
         title = "Subprocessor Disclosure",
         version = SUBPROCESSOR_DISCLOSURE_VERSION,
         lastUpdated = "August 21, 2026",
+        url = SUBPROCESSOR_DISCLOSURE_URL,
         body = """
 Last updated: August 21, 2026
 
@@ -378,6 +392,7 @@ For questions about subprocessors, contact: admin@kosdllp.com
         title = "Refund & Cancellation Policy",
         version = REFUND_POLICY_VERSION,
         lastUpdated = "August 21, 2026",
+        url = REFUND_POLICY_URL,
         body = """
 Last updated: August 21, 2026
 
@@ -429,6 +444,7 @@ For billing questions, contact: admin@kosdllp.com
         title = "Accessibility Statement",
         version = ACCESSIBILITY_STATEMENT_VERSION,
         lastUpdated = "August 21, 2026",
+        url = ACCESSIBILITY_STATEMENT_URL,
         body = """
 Last updated: August 21, 2026
 

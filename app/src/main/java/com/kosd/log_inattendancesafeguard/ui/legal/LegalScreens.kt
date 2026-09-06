@@ -30,6 +30,7 @@ fun LegalDocumentScreen(
     onAccept: (() -> Unit)? = null,
     onBack: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -37,6 +38,15 @@ fun LegalDocumentScreen(
             .padding(16.dp)
     ) {
         Text(document.body, style = MaterialTheme.typography.bodyMedium, lineHeight = 20.sp)
+        Spacer(Modifier.height(16.dp))
+        TextButton(onClick = {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(document.url))
+            context.startActivity(intent)
+        }) {
+            Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("View this document online", fontSize = 13.sp)
+        }
         if (onAccept != null) {
             Spacer(Modifier.height(24.dp))
             Button(
@@ -203,6 +213,16 @@ fun MonitoringNoticeScreen(
         }
         Spacer(Modifier.height(16.dp))
         Text(LegalService.monitoringNotice, style = MaterialTheme.typography.bodyMedium, lineHeight = 20.sp)
+        Spacer(Modifier.height(16.dp))
+        val context = androidx.compose.ui.platform.LocalContext.current
+        TextButton(onClick = {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(LegalService.MONITORING_NOTICE_URL))
+            context.startActivity(intent)
+        }) {
+            Icon(Icons.Default.OpenInBrowser, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("View this document online", fontSize = 13.sp)
+        }
         Spacer(Modifier.height(24.dp))
         if (isLoading) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
