@@ -23,6 +23,8 @@ import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
 import com.kosd.log_inattendancesafeguard.models.Event
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Instant
@@ -31,7 +33,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 private fun Throwable.toErrorMessage(): String {
-    val raw = message ?: "Unknown error"
+    val raw = message ?: this::class.simpleName ?: "Unknown error"
     return when {
         raw.contains("Unable to resolve host", ignoreCase = true) ||
         raw.contains("No address associated with hostname", ignoreCase = true) ||
@@ -98,7 +100,8 @@ class AuthRepository {
         firstName: String, lastName: String,
         orgName: String? = null,
         inviteCode: String? = null
-    ): Result<Unit> = runCatching {
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
         val url = URL("${BuildConfig.SUPABASE_URL}/functions/v1/send-email")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
@@ -139,13 +142,15 @@ class AuthRepository {
 
         Result.Success(Unit)
     }.getOrElse { Result.Error(it.toErrorMessage()) }
+    }
 
     /**
      * Verifies a signup confirmation token by calling the verify-signup Edge Function.
      * Called when the app receives a deep link with a `token` query parameter.
      * Returns the confirmed email on success, null on failure.
      */
-    suspend fun verifySignupConfirmation(token: String): String? = runCatching {
+    suspend fun verifySignupConfirmation(token: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
         val url = URL("${BuildConfig.SUPABASE_URL}/functions/v1/verify-signup")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
@@ -174,6 +179,7 @@ class AuthRepository {
             null
         }
     }.getOrNull()
+    }
 
     // ── Invite-code signup (bypasses email confirmation) ──────────────────────
     // Calls the invite-signup Edge Function which creates the user with
@@ -182,7 +188,8 @@ class AuthRepository {
         email: String, password: String,
         firstName: String, lastName: String,
         inviteCode: String
-    ): Result<InviteSignupResponse> = runCatching {
+    ): Result<InviteSignupResponse> = withContext(Dispatchers.IO) {
+        runCatching {
         val url = URL("${BuildConfig.SUPABASE_URL}/functions/v1/invite-signup")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
@@ -240,6 +247,7 @@ class AuthRepository {
             refreshToken = refreshToken
         ))
     }.getOrElse { Result.Error(it.toErrorMessage()) }
+    }
 
     suspend fun getCurrentUser(): Result<User> = runCatching {
         Result.Success(getCurrentUserProfile())
@@ -256,7 +264,8 @@ class AuthRepository {
      * Always returns success (even if email doesn't exist) to prevent
      * email enumeration.
      */
-    suspend fun requestPasswordReset(email: String): Result<Unit> = runCatching {
+    suspend fun requestPasswordReset(email: String): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
         val url = URL("${BuildConfig.SUPABASE_URL}/functions/v1/send-email")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
@@ -293,13 +302,15 @@ class AuthRepository {
 
         Result.Success(Unit)
     }.getOrElse { Result.Error(it.toErrorMessage()) }
+    }
 
     /**
      * Verifies a password reset token and sets the new password.
      * Calls the verify-password-reset Edge Function.
      * Returns the user's email on success, null on failure.
      */
-    suspend fun verifyPasswordReset(token: String, newPassword: String): String? = runCatching {
+    suspend fun verifyPasswordReset(token: String, newPassword: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
         val url = URL("${BuildConfig.SUPABASE_URL}/functions/v1/verify-password-reset")
         val conn = url.openConnection() as HttpURLConnection
         conn.requestMethod = "POST"
@@ -331,6 +342,7 @@ class AuthRepository {
             null
         }
     }.getOrNull()
+    }
 
     suspend fun logout(): Result<Unit> = runCatching {
         client.auth.signOut()
