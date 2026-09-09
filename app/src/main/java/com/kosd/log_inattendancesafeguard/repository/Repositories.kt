@@ -382,7 +382,15 @@ class AuthRepository {
         val memberships = client.postgrest["org_members"]
             .select { filter { eq("user_id", uid); eq("is_active", true) } }
             .decodeList<OrgMember>()
-        Result.Success(memberships)
+        if (memberships.isEmpty()) return@runCatching Result.Success(emptyList())
+        // Filter memberships to only those in ClockCard organizations
+        val orgIds = memberships.map { it.organizationId }
+        val clockcardOrgIds = client.postgrest["organizations"]
+            .select { filter { isIn("id", orgIds); eq("app_source", "clockcard") } }
+            .decodeList<Organization>()
+            .map { it.id }
+            .toSet()
+        Result.Success(memberships.filter { it.organizationId in clockcardOrgIds })
     }.getOrElse { Result.Error(it.toErrorMessage()) }
 
     private suspend fun getCurrentUserProfile(): User {
@@ -510,10 +518,11 @@ class OrganizationRepository {
     suspend fun joinByInviteCode(code: String): Result<Organization> = runCatching {
         val result = client.postgrest.rpc("join_organization_by_invite", buildJsonObject {
             put("p_invite_code", code.trim())
+            put("p_app_source", "clockcard")
         }).decodeAs<JsonObject>()
         val orgId = result["organization_id"]?.jsonPrimitive?.contentOrNull ?: error("Invite join failed")
         val org = client.postgrest["organizations"]
-            .select { filter { eq("id", orgId) } }
+            .select { filter { eq("id", orgId); eq("app_source", "clockcard") } }
             .decodeSingle<Organization>()
         Result.Success(org)
     }.getOrElse { Result.Error(it.toErrorMessage()) }
