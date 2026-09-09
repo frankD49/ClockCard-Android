@@ -26,7 +26,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kosd.log_inattendancesafeguard.ui.theme.AuthViolet
 import com.kosd.log_inattendancesafeguard.ui.theme.AuthVioletLight
+import com.kosd.log_inattendancesafeguard.ui.theme.FloatingShapes
+import com.kosd.log_inattendancesafeguard.ui.theme.GlassAuthSheet
 import com.kosd.log_inattendancesafeguard.ui.theme.OnAuthViolet
+import com.kosd.log_inattendancesafeguard.ui.theme.rememberHaptics
 import com.kosd.log_inattendancesafeguard.viewmodel.AuthViewModel
 import com.kosd.log_inattendancesafeguard.viewmodel.OrganizationViewModel
 
@@ -47,6 +50,7 @@ fun RegisterScreen(
     var orgName         by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmVisible  by remember { mutableStateOf(false) }
+    val haptics         = rememberHaptics()
 
     val passwordsMatch = password == confirmPassword || confirmPassword.isEmpty()
 
@@ -55,6 +59,11 @@ fun RegisterScreen(
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(AuthVioletLight, AuthViolet)))
     ) {
+        FloatingShapes(
+            primaryColor = OnAuthViolet,
+            tertiaryColor = MaterialTheme.colorScheme.tertiary
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -63,7 +72,7 @@ fun RegisterScreen(
             TopAppBar(
                 title = { Text("Create Account", color = OnAuthViolet) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { haptics.tap(); onNavigateBack }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
@@ -75,7 +84,7 @@ fun RegisterScreen(
             )
 
             Column(
-                modifier = Modifier.padding(horizontal = 24.dp),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Icon(
@@ -87,220 +96,237 @@ fun RegisterScreen(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     "Join ClockCard",
-                    fontSize = 22.sp,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = OnAuthViolet,
                     textAlign = TextAlign.Center
                 )
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.weight(1f))
 
-                Card(
-                    shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                GlassAuthSheet {
+                    // Drag handle
+                    Box(
+                        modifier = Modifier
+                            .width(40.dp)
+                            .height(4.dp)
+                            .background(
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+                                RoundedCornerShape(2.dp)
+                            )
+                    )
+                    Spacer(Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = firstName,
-                                onValueChange = { firstName = it },
-                                label = { Text("First Name") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.small,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                            )
-                            OutlinedTextField(
-                                value = lastName,
-                                onValueChange = { lastName = it },
-                                label = { Text("Last Name") },
-                                singleLine = true,
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.small,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                            )
-                        }
-
                         OutlinedTextField(
-                            value = email,
-                            onValueChange = { email = it },
-                            label = { Text("Email") },
+                            value = firstName,
+                            onValueChange = { firstName = it },
+                            label = { Text("First Name") },
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Email,
-                                imeAction = ImeAction.Next
-                            ),
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.small,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                        )
+                        OutlinedTextField(
+                            value = lastName,
+                            onValueChange = { lastName = it },
+                            label = { Text("Last Name") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.small,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("Email") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Email,
+                            imeAction = ImeAction.Next
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.small
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Password") },
+                        singleLine = true,
+                        visualTransformation = if (passwordVisible) VisualTransformation.None
+                                               else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next
+                        ),
+                        trailingIcon = {
+                            IconButton(onClick = { haptics.tap(); passwordVisible = !passwordVisible }) {
+                                Icon(
+                                    if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.small
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm Password") },
+                        singleLine = true,
+                        visualTransformation = if (confirmVisible) VisualTransformation.None
+                                               else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Password,
+                            imeAction = ImeAction.Next
+                        ),
+                        trailingIcon = {
+                            IconButton(onClick = { haptics.tap(); confirmVisible = !confirmVisible }) {
+                                Icon(
+                                    if (confirmVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = null
+                                )
+                            }
+                        },
+                        isError = !passwordsMatch,
+                        supportingText = {
+                            if (!passwordsMatch) Text("Passwords do not match", color = MaterialTheme.colorScheme.error)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MaterialTheme.shapes.small
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // ── Role Selection ───────────────────────────────────
+                    Text("I want to:", fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth())
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = isOwner,
+                            onClick = { haptics.selection(); isOwner = true },
+                            label = {
+                                Text(
+                                    "Create Organization",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.large
+                        )
+                        FilterChip(
+                            selected = !isOwner,
+                            onClick = { haptics.selection(); isOwner = false },
+                            label = {
+                                Text(
+                                    "Join Organization",
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    maxLines = 1
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = MaterialTheme.shapes.large
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    if (isOwner) {
+                        OutlinedTextField(
+                            value = orgName,
+                            onValueChange = { orgName = it },
+                            label = { Text("Organization Name *") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.small
                         )
-
+                    } else {
                         OutlinedTextField(
-                            value = password,
-                            onValueChange = { password = it },
-                            label = { Text("Password") },
+                            value = inviteCode,
+                            onValueChange = { inviteCode = it.uppercase() },
+                            label = { Text("Invite Code *") },
                             singleLine = true,
-                            visualTransformation = if (passwordVisible) VisualTransformation.None
-                                                   else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password,
-                                imeAction = ImeAction.Next
-                            ),
-                            trailingIcon = {
-                                IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                    Icon(
-                                        if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = null
-                                    )
-                                }
-                            },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                             modifier = Modifier.fillMaxWidth(),
                             shape = MaterialTheme.shapes.small
                         )
-
-                        OutlinedTextField(
-                            value = confirmPassword,
-                            onValueChange = { confirmPassword = it },
-                            label = { Text("Confirm Password") },
-                            singleLine = true,
-                            visualTransformation = if (confirmVisible) VisualTransformation.None
-                                                   else PasswordVisualTransformation(),
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Password,
-                                imeAction = ImeAction.Next
-                            ),
-                            trailingIcon = {
-                                IconButton(onClick = { confirmVisible = !confirmVisible }) {
-                                    Icon(
-                                        if (confirmVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                        contentDescription = null
-                                    )
-                                }
-                            },
-                            isError = !passwordsMatch,
-                            supportingText = {
-                                if (!passwordsMatch) Text("Passwords do not match", color = MaterialTheme.colorScheme.error)
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = MaterialTheme.shapes.small
+                        Text(
+                            "Your invite code lets you skip email verification and join immediately.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth()
                         )
+                    }
 
-                        // ── Role Selection ───────────────────────────────────
-                        Text("I want to:", fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            FilterChip(
-                                selected = isOwner,
-                                onClick = { isOwner = true },
-                                label = {
-                                    Text(
-                                        "Create Organization",
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.large
-                            )
-                            FilterChip(
-                                selected = !isOwner,
-                                onClick = { isOwner = false },
-                                label = {
-                                    Text(
-                                        "Join Organization",
-                                        modifier = Modifier.fillMaxWidth(),
-                                        textAlign = TextAlign.Center,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        maxLines = 1
-                                    )
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.large
-                            )
-                        }
+                    Spacer(Modifier.height(20.dp))
 
-                        if (isOwner) {
-                            OutlinedTextField(
-                                value = orgName,
-                                onValueChange = { orgName = it },
-                                label = { Text("Organization Name *") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = MaterialTheme.shapes.small
+                    val canRegister = firstName.isNotBlank() && lastName.isNotBlank() &&
+                            email.isNotBlank() && password.isNotBlank() &&
+                            password == confirmPassword &&
+                            (if (isOwner) orgName.isNotBlank() else inviteCode.isNotBlank()) &&
+                            !viewModel.isLoading
+
+                    Button(
+                        onClick = {
+                            haptics.tap()
+                            viewModel.register(
+                                email, password, firstName, lastName,
+                                inviteCode.ifBlank { null },
+                                if (isOwner) orgName.trim() else null,
+                                orgViewModel
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = MaterialTheme.shapes.small,
+                        enabled = canRegister
+                    ) {
+                        if (viewModel.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(22.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
                             )
                         } else {
-                            OutlinedTextField(
-                                value = inviteCode,
-                                onValueChange = { inviteCode = it.uppercase() },
-                                label = { Text("Invite Code *") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = MaterialTheme.shapes.small
-                            )
-                            Text(
-                                "Your invite code lets you skip email verification and join immediately.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                            Text("Create Account", fontWeight = FontWeight.SemiBold)
                         }
+                    }
 
-                        val canRegister = firstName.isNotBlank() && lastName.isNotBlank() &&
-                                email.isNotBlank() && password.isNotBlank() &&
-                                password == confirmPassword &&
-                                (if (isOwner) orgName.isNotBlank() else inviteCode.isNotBlank()) &&
-                                !viewModel.isLoading
-
-                        Button(
-                            onClick = {
-                                viewModel.register(
-                                    email, password, firstName, lastName,
-                                    inviteCode.ifBlank { null },
-                                    if (isOwner) orgName.trim() else null,
-                                    orgViewModel
-                                )
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = MaterialTheme.shapes.small,
-                            enabled = canRegister
-                        ) {
-                            if (viewModel.isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text("Create Account", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                "Already have an account?",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            TextButton(onClick = onNavigateBack) {
-                                Text("Sign In", fontWeight = FontWeight.Bold)
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Already have an account?",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        TextButton(onClick = { haptics.tap(); onNavigateBack }) {
+                            Text("Sign In", fontWeight = FontWeight.Bold)
                         }
                     }
                 }

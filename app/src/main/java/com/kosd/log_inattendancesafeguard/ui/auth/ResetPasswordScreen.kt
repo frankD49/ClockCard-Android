@@ -3,6 +3,7 @@ package com.kosd.log_inattendancesafeguard.ui.auth
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -24,17 +25,16 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.kosd.log_inattendancesafeguard.ui.theme.AuthViolet
 import com.kosd.log_inattendancesafeguard.ui.theme.AuthVioletLight
+import com.kosd.log_inattendancesafeguard.ui.theme.FloatingShapes
+import com.kosd.log_inattendancesafeguard.ui.theme.GlassAuthSheet
 import com.kosd.log_inattendancesafeguard.ui.theme.OnAuthViolet
+import com.kosd.log_inattendancesafeguard.ui.theme.rememberHaptics
 import com.kosd.log_inattendancesafeguard.viewmodel.AuthViewModel
 
-/**
- * Screen shown when the user taps "Forgot Password?" on the login screen.
- * Prompts for email, sends a reset link via Resend.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotPasswordScreen(
@@ -43,31 +43,26 @@ fun ForgotPasswordScreen(
 ) {
     var email by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    val haptics = rememberHaptics()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(AuthVioletLight, AuthViolet)))
     ) {
+        FloatingShapes(primaryColor = OnAuthViolet, tertiaryColor = MaterialTheme.colorScheme.tertiary)
+
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { haptics.tap(); onBack }) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = OnAuthViolet)
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
 
             Icon(
                 imageVector = Icons.Default.Email,
@@ -75,75 +70,59 @@ fun ForgotPasswordScreen(
                 modifier = Modifier.size(64.dp),
                 tint = OnAuthViolet
             )
-
-            Spacer(Modifier.height(16.dp))
-
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = "Reset Password",
-                fontSize = 26.sp,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = OnAuthViolet
             )
-
             Spacer(Modifier.height(8.dp))
-
             Text(
                 text = "Enter your email and we'll send you a link to reset your password.",
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = OnAuthViolet.copy(alpha = 0.8f),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.weight(1f))
 
-            Card(
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                focusManager.clearFocus()
-                                if (email.isNotBlank()) {
-                                    viewModel.requestPasswordReset(email)
-                                }
-                            }
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.small
-                    )
+            GlassAuthSheet {
+                Box(
+                    modifier = Modifier
+                        .width(40.dp).height(4.dp)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
+                )
+                Spacer(Modifier.height(16.dp))
 
-                    Button(
-                        onClick = { viewModel.requestPasswordReset(email) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = MaterialTheme.shapes.small,
-                        enabled = email.isNotBlank() && !viewModel.isLoading
-                    ) {
-                        if (viewModel.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Text("Send Reset Link", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Email") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            if (email.isNotBlank()) { haptics.tap(); viewModel.requestPasswordReset(email) }
                         }
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Button(
+                    onClick = { haptics.tap(); viewModel.requestPasswordReset(email) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = MaterialTheme.shapes.small,
+                    enabled = email.isNotBlank() && !viewModel.isLoading
+                ) {
+                    if (viewModel.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                    } else {
+                        Text("Send Reset Link", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -154,18 +133,11 @@ fun ForgotPasswordScreen(
 
     if (viewModel.passwordResetRequested) {
         AlertDialog(
-            onDismissRequest = {
-                viewModel.passwordResetRequested = false
-                onBack()
-            },
+            onDismissRequest = { viewModel.passwordResetRequested = false; onBack() },
             title = { Text("Check Your Email") },
             text = { Text(viewModel.successMessage ?: "If an account exists for that email, a reset link has been sent.") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.passwordResetRequested = false
-                    viewModel.dismissSuccess()
-                    onBack()
-                }) { Text("OK") }
+                TextButton(onClick = { viewModel.passwordResetRequested = false; viewModel.dismissSuccess(); onBack() }) { Text("OK") }
             }
         )
     }
@@ -175,17 +147,11 @@ fun ForgotPasswordScreen(
             onDismissRequest = { viewModel.dismissError() },
             title = { Text("Error") },
             text = { Text(viewModel.errorMessage ?: "An error occurred") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissError() }) { Text("OK") }
-            }
+            confirmButton = { TextButton(onClick = { viewModel.dismissError() }) { Text("OK") } }
         )
     }
 }
 
-/**
- * Screen shown when the user clicks the password-reset deep link.
- * Prompts for a new password, then calls verify-password-reset.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResetPasswordScreen(
@@ -196,20 +162,20 @@ fun ResetPasswordScreen(
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+    val haptics = rememberHaptics()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(listOf(AuthVioletLight, AuthViolet)))
     ) {
+        FloatingShapes(primaryColor = OnAuthViolet, tertiaryColor = MaterialTheme.colorScheme.tertiary)
+
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp),
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(72.dp))
+            Spacer(Modifier.height(64.dp))
 
             Icon(
                 imageVector = Icons.Default.Security,
@@ -217,103 +183,83 @@ fun ResetPasswordScreen(
                 modifier = Modifier.size(64.dp),
                 tint = OnAuthViolet
             )
-
-            Spacer(Modifier.height(16.dp))
-
+            Spacer(Modifier.height(12.dp))
             Text(
                 text = "New Password",
-                fontSize = 26.sp,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = OnAuthViolet
             )
-
             Spacer(Modifier.height(8.dp))
-
             Text(
                 text = "Enter your new password below.",
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 color = OnAuthViolet.copy(alpha = 0.8f)
             )
 
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.weight(1f))
 
-            Card(
-                shape = MaterialTheme.shapes.large,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    OutlinedTextField(
-                        value = newPassword,
-                        onValueChange = { newPassword = it },
-                        label = { Text("New Password") },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                                               else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        ),
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff
-                                                  else Icons.Default.Visibility,
-                                    contentDescription = null
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.small
-                    )
+            GlassAuthSheet {
+                Box(
+                    modifier = Modifier
+                        .width(40.dp).height(4.dp)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
+                )
+                Spacer(Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Confirm Password") },
-                        singleLine = true,
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                                               else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                focusManager.clearFocus()
-                                if (newPassword.isNotBlank() && confirmPassword.isNotBlank()) {
-                                    viewModel.verifyPasswordReset(newPassword, confirmPassword)
-                                }
-                            }
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.small
-                    )
-
-                    Button(
-                        onClick = { viewModel.verifyPasswordReset(newPassword, confirmPassword) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = MaterialTheme.shapes.small,
-                        enabled = newPassword.isNotBlank() && confirmPassword.isNotBlank() && !viewModel.isLoading
-                    ) {
-                        if (viewModel.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(22.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
+                OutlinedTextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New Password") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
+                    trailingIcon = {
+                        IconButton(onClick = { haptics.tap(); passwordVisible = !passwordVisible }) {
+                            Icon(
+                                imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = null
                             )
-                        } else {
-                            Text("Reset Password", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = confirmPassword,
+                    onValueChange = { confirmPassword = it },
+                    label = { Text("Confirm Password") },
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            focusManager.clearFocus()
+                            if (newPassword.isNotBlank() && confirmPassword.isNotBlank()) {
+                                haptics.tap(); viewModel.verifyPasswordReset(newPassword, confirmPassword)
+                            }
+                        }
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Button(
+                    onClick = { haptics.tap(); viewModel.verifyPasswordReset(newPassword, confirmPassword) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = MaterialTheme.shapes.small,
+                    enabled = newPassword.isNotBlank() && confirmPassword.isNotBlank() && !viewModel.isLoading
+                ) {
+                    if (viewModel.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                    } else {
+                        Text("Reset Password", fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -324,18 +270,11 @@ fun ResetPasswordScreen(
 
     if (viewModel.passwordResetComplete) {
         AlertDialog(
-            onDismissRequest = {
-                viewModel.passwordResetComplete = false
-                onBackToLogin()
-            },
+            onDismissRequest = { viewModel.passwordResetComplete = false; onBackToLogin() },
             title = { Text("Password Reset") },
             text = { Text(viewModel.successMessage ?: "Password reset successfully! Please sign in.") },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.passwordResetComplete = false
-                    viewModel.dismissSuccess()
-                    onBackToLogin()
-                }) { Text("Sign In") }
+                TextButton(onClick = { viewModel.passwordResetComplete = false; viewModel.dismissSuccess(); onBackToLogin() }) { Text("Sign In") }
             }
         )
     }
@@ -345,9 +284,7 @@ fun ResetPasswordScreen(
             onDismissRequest = { viewModel.dismissError() },
             title = { Text("Error") },
             text = { Text(viewModel.errorMessage ?: "An error occurred") },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dismissError() }) { Text("OK") }
-            }
+            confirmButton = { TextButton(onClick = { viewModel.dismissError() }) { Text("OK") } }
         )
     }
 }
