@@ -437,7 +437,7 @@ class OrganizationRepository {
                 put("p_population_tier", request.populationTier.value)
                 put("p_app_source", "clockcard")
             }
-        ).decodeSingle<Organization>()
+        ).decodeAs<Organization>()
         Result.Success(org)
     }.getOrElse { Result.Error(it.toErrorMessage()) }
 
