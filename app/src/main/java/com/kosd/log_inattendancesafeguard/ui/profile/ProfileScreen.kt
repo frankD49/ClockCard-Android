@@ -39,7 +39,6 @@ fun ProfileScreen(
     orgViewModel: OrganizationViewModel
 ) {
     val user: User? = authViewModel.currentUser
-    var showCreateOrgDialog    by remember { mutableStateOf(false) }
     var showJoinOrgDialog       by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
     var showLogoutConfirm      by remember { mutableStateOf(false) }
@@ -133,23 +132,13 @@ fun ProfileScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(Modifier.height(12.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { showCreateOrgDialog = true },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Create")
-                        }
-                        OutlinedButton(
-                            onClick = { showJoinOrgDialog = true },
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Join")
-                        }
+                    OutlinedButton(
+                        onClick = { showJoinOrgDialog = true },
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Join Organization")
                     }
                 }
             }
@@ -216,25 +205,14 @@ fun ProfileScreen(
                 }
             }
             Spacer(Modifier.height(4.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(
-                    onClick = { showCreateOrgDialog = true },
-                    modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Create")
-                }
-                OutlinedButton(
-                    onClick = { showJoinOrgDialog = true },
-                    modifier = Modifier.weight(1f),
-                    shape = MaterialTheme.shapes.small
-                ) {
-                    Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Join")
-                }
+            OutlinedButton(
+                onClick = { showJoinOrgDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small
+            ) {
+                Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Join Organization")
             }
         }
 
@@ -322,14 +300,6 @@ fun ProfileScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-    }
-
-    // ── Create Org Dialog ─────────────────────────────────────────────────────
-    if (showCreateOrgDialog) {
-        CreateOrganizationDialog(
-            viewModel = orgViewModel,
-            onDismiss = { showCreateOrgDialog = false }
-        )
     }
 
     // ── Join Org Dialog ───────────────────────────────────────────────────────
@@ -469,88 +439,6 @@ fun ProfileActionRow(icon: ImageVector, label: String, tint: Color, onClick: () 
         Text(label, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-}
-
-@Composable
-fun CreateOrganizationDialog(
-    viewModel: OrganizationViewModel,
-    onDismiss: () -> Unit
-) {
-    var name        by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var timezone    by remember { mutableStateOf("UTC") }
-    var maxMembers  by remember { mutableStateOf("100") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Create Organization", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Organization Name *") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                )
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it },
-                    label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    maxLines = 3
-                )
-                OutlinedTextField(
-                    value = timezone,
-                    onValueChange = { timezone = it },
-                    label = { Text("Timezone") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
-                )
-                OutlinedTextField(
-                    value = maxMembers,
-                    onValueChange = { maxMembers = it },
-                    label = { Text("Max Members") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    )
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    viewModel.createOrganization(
-                        name = name,
-                        description = description.ifBlank { null },
-                        timezone = timezone.ifBlank { "UTC" },
-                        maxMembers = maxMembers.toIntOrNull() ?: 100,
-                        onCreated = { onDismiss() }
-                    )
-                },
-                enabled = name.isNotBlank() && viewModel.isLoading == false
-            ) {
-                if (viewModel.isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text("Create")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        }
-    )
 }
 
 @Composable
