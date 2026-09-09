@@ -2,7 +2,6 @@
 package com.kosd.log_inattendancesafeguard.repository
 
 import com.kosd.log_inattendancesafeguard.models.*
-import com.kosd.log_inattendancesafeguard.models.EventStaffMember
 import com.kosd.log_inattendancesafeguard.network.SupabaseClientProvider.client
 import com.kosd.log_inattendancesafeguard.BuildConfig
 import io.github.jan.supabase.auth.auth
@@ -22,7 +21,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonArray
-import com.kosd.log_inattendancesafeguard.models.Event
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -82,6 +80,15 @@ class AuthRepository {
             this.email = email
             this.password = password
         }
+        // Enforce app boundary: only ClockCard-registered users may log in here.
+        val uid = client.auth.currentUserOrNull()?.id ?: error("Not authenticated")
+        val registrations = client.postgrest["user_app_registrations"]
+            .select { filter { eq("user_id", uid); eq("app_source", "clockcard") } }
+            .decodeList<JsonObject>()
+        if (registrations.isEmpty()) {
+            client.auth.signOut()
+            error("This account is not registered for ClockCard. Please create a new ClockCard account.")
+        }
         Result.Success(getCurrentUserProfile())
     }.getOrElse { Result.Error(it.toErrorMessage()) }
 
@@ -113,6 +120,7 @@ class AuthRepository {
             put("password", password)
             put("firstName", firstName)
             put("lastName", lastName)
+            put("appSource", "clockcard")
             if (!orgName.isNullOrBlank()) put("orgName", orgName)
             if (!inviteCode.isNullOrBlank()) put("inviteCode", inviteCode)
         }
@@ -250,6 +258,15 @@ class AuthRepository {
     }
 
     suspend fun getCurrentUser(): Result<User> = runCatching {
+        // Enforce app boundary on session restore.
+        val uid = client.auth.currentUserOrNull()?.id ?: error("Not authenticated")
+        val registrations = client.postgrest["user_app_registrations"]
+            .select { filter { eq("user_id", uid); eq("app_source", "clockcard") } }
+            .decodeList<JsonObject>()
+        if (registrations.isEmpty()) {
+            client.auth.signOut()
+            error("This account is not registered for ClockCard.")
+        }
         Result.Success(getCurrentUserProfile())
     }.getOrElse { Result.Error(it.toErrorMessage()) }
 
@@ -543,50 +560,6 @@ class OrganizationRepository {
         client.postgrest["attendance_rules"].delete { filter { eq("id", ruleId) } }
         Result.Success(Unit)
     }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    // ── Event Staff management (owner only) ───────────────────────────────────
-
-    suspend fun grantEventStaff(memberId: String, orgId: String): Result<Boolean> = runCatching {
-        val params = buildJsonObject {
-            put("p_member_id", memberId)
-            put("p_organization_id", orgId)
-        }
-        val json = client.postgrest.rpc("grant_event_staff", params).decodeAs<JsonObject>()
-        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
-        if (!success) {
-            return@runCatching Result.Error(json["message"]?.jsonPrimitive?.contentOrNull ?: "Failed to grant privilege")
-        }
-        Result.Success(true)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun revokeEventStaff(memberId: String, orgId: String): Result<Boolean> = runCatching {
-        val params = buildJsonObject {
-            put("p_member_id", memberId)
-            put("p_organization_id", orgId)
-        }
-        val json = client.postgrest.rpc("revoke_event_staff", params).decodeAs<JsonObject>()
-        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
-        if (!success) {
-            return@runCatching Result.Error(json["message"]?.jsonPrimitive?.contentOrNull ?: "Failed to revoke privilege")
-        }
-        Result.Success(true)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun getEventStaff(orgId: String): Result<List<EventStaffMember>> = runCatching {
-        val params = buildJsonObject { put("p_organization_id", orgId) }
-        // JSON/JSONB RPCs return the object itself. decodeSingle() expects a
-        // PostgREST row array and therefore fails when the root token is '{'.
-        val json = client.postgrest.rpc("get_event_staff", params).decodeAs<JsonObject>()
-        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
-        if (!success) {
-            return@runCatching Result.Error(json["message"]?.jsonPrimitive?.contentOrNull ?: "Not authorized")
-        }
-        val staffArray = json["staff"]?.jsonArray ?: kotlinx.serialization.json.JsonArray(emptyList())
-        val staff = staffArray.map { element ->
-            kotlinx.serialization.json.Json.decodeFromJsonElement<EventStaffMember>(element)
-        }
-        Result.Success(staff)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
 }
 
 // ─── Attendance Repository ───────────────────────────────────────────────────
@@ -713,184 +686,5 @@ class AttendanceRepository {
             put("p_end_date", endDate)
         }).decodeList<AttendanceReportRow>()
         Result.Success(rows)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-}
-
-// ─── Event Repository (Phase 3 MMP — Event Mode) ─────────────────────────────
-
-class EventRepository {
-
-    suspend fun createEvent(
-        organizationId: String,
-        name: String,
-        eventDate: String,
-        checkInOpenAt: String,
-        checkInCloseAt: String,
-        venueName: String?,
-        venueLatitude: Double?,
-        venueLongitude: Double?,
-        venueRadiusM: Double?,
-        requireLocation: Boolean,
-        expectedCount: Int,
-        retentionDays: Int
-    ): Result<CreateEventResponse> = runCatching {
-        val params = buildJsonObject {
-            put("p_organization_id", organizationId)
-            put("p_name", name)
-            put("p_event_date", eventDate)
-            put("p_check_in_open_at", checkInOpenAt)
-            put("p_check_in_close_at", checkInCloseAt)
-            if (venueName != null) put("p_venue_name", venueName) else put("p_venue_name", kotlinx.serialization.json.JsonNull)
-            if (venueLatitude != null) put("p_venue_latitude", venueLatitude) else put("p_venue_latitude", kotlinx.serialization.json.JsonNull)
-            if (venueLongitude != null) put("p_venue_longitude", venueLongitude) else put("p_venue_longitude", kotlinx.serialization.json.JsonNull)
-            if (venueRadiusM != null) put("p_venue_radius_m", venueRadiusM) else put("p_venue_radius_m", kotlinx.serialization.json.JsonNull)
-            put("p_require_location", requireLocation)
-            put("p_expected_count", expectedCount)
-            put("p_retention_days", retentionDays)
-        }
-        // RPC returns a bare JSONB object (not an array), so decode as JsonObject
-        // and map fields manually — decodeSingle expects an array wrapper.
-        val json = client.postgrest.rpc("create_event", params).decodeSingle<JsonObject>()
-        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
-        val message = json["message"]?.jsonPrimitive?.contentOrNull
-        if (!success) {
-            return@runCatching Result.Error(message ?: "Failed to create event")
-        }
-        val eventJson = json["event"]?.let { kotlinx.serialization.json.Json.decodeFromJsonElement<Event>(it) }
-        val token = json["token"]?.jsonPrimitive?.contentOrNull
-        val tokenId = json["token_id"]?.jsonPrimitive?.contentOrNull
-        val checkInUrl = json["check_in_url"]?.jsonPrimitive?.contentOrNull
-        Result.Success(CreateEventResponse(
-            success = true,
-            event = eventJson,
-            token = token,
-            tokenId = tokenId,
-            checkInUrl = checkInUrl
-        ))
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun getEvents(organizationId: String): Result<List<Event>> = runCatching {
-        val events = client.postgrest["events"]
-            .select { filter { eq("organization_id", organizationId) } }
-            .decodeList<Event>()
-        Result.Success(events)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun getEvent(eventId: String): Result<Event> = runCatching {
-        val event = client.postgrest["events"]
-            .select { filter { eq("id", eventId) } }
-            .decodeSingle<Event>()
-        Result.Success(event)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun eventCheckIn(
-        eventId: String,
-        token: String?,
-        fullName: String,
-        email: String?,
-        userId: String?,
-        guestId: String?,
-        latitude: Double?,
-        longitude: Double?,
-        checkInMethod: String
-    ): Result<EventCheckInResponse> = runCatching {
-        val params = buildJsonObject {
-            put("p_event_id", eventId)
-            if (token != null) put("p_token", token) else put("p_token", kotlinx.serialization.json.JsonNull)
-            put("p_full_name", fullName)
-            if (email != null) put("p_email", email) else put("p_email", kotlinx.serialization.json.JsonNull)
-            if (userId != null) put("p_user_id", userId) else put("p_user_id", kotlinx.serialization.json.JsonNull)
-            if (guestId != null) put("p_guest_id", guestId) else put("p_guest_id", kotlinx.serialization.json.JsonNull)
-            if (latitude != null) put("p_latitude", latitude) else put("p_latitude", kotlinx.serialization.json.JsonNull)
-            if (longitude != null) put("p_longitude", longitude) else put("p_longitude", kotlinx.serialization.json.JsonNull)
-            put("p_check_in_method", checkInMethod)
-        }
-        val response = client.postgrest.rpc("event_check_in", params).decodeSingle<EventCheckInResponse>()
-        Result.Success(response)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun bulkCheckIn(
-        eventId: String,
-        attendees: kotlinx.serialization.json.JsonElement,
-        checkInMethod: String
-    ): Result<BulkCheckInResponse> = runCatching {
-        val params = buildJsonObject {
-            put("p_event_id", eventId)
-            put("p_attendees", attendees)
-            put("p_check_in_method", checkInMethod)
-        }
-        val response = client.postgrest.rpc("bulk_event_check_in", params).decodeSingle<BulkCheckInResponse>()
-        Result.Success(response)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun getLiveCount(eventId: String): Result<EventLiveCount> = runCatching {
-        val params = buildJsonObject { put("p_event_id", eventId) }
-        val response = client.postgrest.rpc("get_event_live_count", params).decodeSingle<EventLiveCount>()
-        Result.Success(response)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun getAttendees(eventId: String, page: Int, pageSize: Int): Result<EventAttendeesResponse> = runCatching {
-        val params = buildJsonObject {
-            put("p_event_id", eventId)
-            put("p_page", page)
-            put("p_page_size", pageSize)
-        }
-        val response = client.postgrest.rpc("get_event_attendees", params).decodeSingle<EventAttendeesResponse>()
-        Result.Success(response)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun getReport(eventId: String): Result<EventReport> = runCatching {
-        val params = buildJsonObject { put("p_event_id", eventId) }
-        val response = client.postgrest.rpc("get_event_report", params).decodeSingle<EventReport>()
-        Result.Success(response)
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun generateQRToken(
-        eventId: String,
-        tokenType: String,
-        expiresSecs: Int,
-        maxUses: Int
-    ): Result<CreateEventResponse> = runCatching {
-        val params = buildJsonObject {
-            put("p_event_id", eventId)
-            put("p_token_type", tokenType)
-            put("p_expires_secs", expiresSecs)
-            put("p_max_uses", maxUses)
-        }
-        val json = client.postgrest.rpc("generate_event_qr_token", params).decodeSingle<JsonObject>()
-        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
-        val message = json["message"]?.jsonPrimitive?.contentOrNull
-        if (!success) {
-            return@runCatching Result.Error(message ?: "Failed to generate token")
-        }
-        Result.Success(CreateEventResponse(
-            success = true,
-            token = json["token"]?.jsonPrimitive?.contentOrNull,
-            tokenId = json["token_id"]?.jsonPrimitive?.contentOrNull
-        ))
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    suspend fun cleanupExpiredEvents(): Result<CreateEventResponse> = runCatching {
-        val json = client.postgrest.rpc("cleanup_expired_events").decodeSingle<JsonObject>()
-        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
-        val message = json["message"]?.jsonPrimitive?.contentOrNull
-        if (!success) {
-            return@runCatching Result.Error(message ?: "Cleanup failed")
-        }
-        Result.Success(CreateEventResponse(success = true))
-    }.getOrElse { Result.Error(it.toErrorMessage()) }
-
-    // ── Kiosk token fetch (for event staff) ──────────────────────────────────
-    suspend fun getKioskToken(eventId: String): Result<String> = runCatching {
-        val params = buildJsonObject { put("p_event_id", eventId) }
-        val json = client.postgrest.rpc("get_kiosk_token", params).decodeSingle<JsonObject>()
-        val success = json["success"]?.jsonPrimitive?.booleanOrNull ?: false
-        val message = json["message"]?.jsonPrimitive?.contentOrNull
-        if (!success) {
-            return@runCatching Result.Error(message ?: "Failed to get kiosk token")
-        }
-        val token = json["token"]?.jsonPrimitive?.contentOrNull
-        if (token != null) Result.Success(token)
-        else Result.Error("No token returned")
     }.getOrElse { Result.Error(it.toErrorMessage()) }
 }

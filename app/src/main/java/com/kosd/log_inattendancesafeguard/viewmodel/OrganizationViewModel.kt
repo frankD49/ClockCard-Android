@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.kosd.log_inattendancesafeguard.models.*
-import com.kosd.log_inattendancesafeguard.models.EventStaffMember
 import com.kosd.log_inattendancesafeguard.repository.OrganizationRepository
 import com.kosd.log_inattendancesafeguard.repository.Result
 import kotlinx.coroutines.launch
@@ -25,7 +24,6 @@ class OrganizationViewModel(private val repository: OrganizationRepository) : Vi
     var members              by mutableStateOf<List<Member>>(emptyList())
     var inviteCodes          by mutableStateOf<List<InviteCode>>(emptyList())
     var attendanceRules      by mutableStateOf<List<AttendanceRule>>(emptyList())
-    var eventStaff           by mutableStateOf<List<EventStaffMember>>(emptyList())
     var isLoading            by mutableStateOf(false)
     var errorMessage         by mutableStateOf<String?>(null)
     var showError            by mutableStateOf(false)
@@ -34,7 +32,6 @@ class OrganizationViewModel(private val repository: OrganizationRepository) : Vi
 
     val isAdminInActiveOrg: Boolean get() = activeMembership?.isAdmin ?: false
     val isOwnerInActiveOrg: Boolean get() = activeMembership?.role?.isOwner ?: false
-    val isEventStaffInActiveOrg: Boolean get() = activeMembership?.role?.isEventStaff ?: false
     val myRoleInActiveOrg: String get() = activeMembership?.role?.displayName ?: ""
     fun can(permission: Permission): Boolean = isOwnerInActiveOrg || permission in activePermissions
 
@@ -375,47 +372,6 @@ class OrganizationViewModel(private val repository: OrganizationRepository) : Vi
     fun dismissError()   { showError = false; errorMessage = null }
     fun dismissSuccess() { showSuccess = false; successMessage = null }
     private fun showError(msg: String) { errorMessage = msg; showError = true }
-
-    // ── Event Staff management (owner only) ───────────────────────────────────
-
-    fun loadEventStaff(orgId: String) {
-        viewModelScope.launch {
-            isLoading = true
-            when (val result = repository.getEventStaff(orgId)) {
-                is Result.Success -> eventStaff = result.data
-                is Result.Error   -> showError(result.message)
-            }
-            isLoading = false
-        }
-    }
-
-    fun grantEventStaff(memberId: String, orgId: String) {
-        viewModelScope.launch {
-            when (val result = repository.grantEventStaff(memberId, orgId)) {
-                is Result.Success -> {
-                    loadEventStaff(orgId)
-                    loadMembers(orgId)
-                    successMessage = "Event staff privilege granted"
-                    showSuccess = true
-                }
-                is Result.Error -> showError(result.message)
-            }
-        }
-    }
-
-    fun revokeEventStaff(memberId: String, orgId: String) {
-        viewModelScope.launch {
-            when (val result = repository.revokeEventStaff(memberId, orgId)) {
-                is Result.Success -> {
-                    loadEventStaff(orgId)
-                    loadMembers(orgId)
-                    successMessage = "Event staff privilege revoked"
-                    showSuccess = true
-                }
-                is Result.Error -> showError(result.message)
-            }
-        }
-    }
 
     class Factory : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

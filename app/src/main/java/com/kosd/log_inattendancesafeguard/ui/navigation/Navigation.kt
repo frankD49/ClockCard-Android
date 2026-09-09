@@ -2,24 +2,19 @@ package com.kosd.log_inattendancesafeguard.ui.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -34,22 +29,14 @@ import com.kosd.log_inattendancesafeguard.ui.auth.LoginScreen
 import com.kosd.log_inattendancesafeguard.ui.auth.RegisterScreen
 import com.kosd.log_inattendancesafeguard.ui.auth.ForgotPasswordScreen
 import com.kosd.log_inattendancesafeguard.ui.auth.ResetPasswordScreen
-import com.kosd.log_inattendancesafeguard.ui.event.EventListScreen
-import com.kosd.log_inattendancesafeguard.ui.event.EventCreateScreen
-import com.kosd.log_inattendancesafeguard.ui.event.EventDetailScreen
-import com.kosd.log_inattendancesafeguard.ui.event.EventReportScreen
-import com.kosd.log_inattendancesafeguard.ui.event.EventStaffScreen
-import com.kosd.log_inattendancesafeguard.ui.event.KioskModeScreen
 import com.kosd.log_inattendancesafeguard.ui.history.HistoryScreen
 import com.kosd.log_inattendancesafeguard.ui.home.HomeScreen
 import com.kosd.log_inattendancesafeguard.ui.profile.ProfileScreen
-import com.kosd.log_inattendancesafeguard.ui.theme.pressScale
 import com.kosd.log_inattendancesafeguard.ClockCardApp
 import com.kosd.log_inattendancesafeguard.viewmodel.AdminViewModel
 import com.kosd.log_inattendancesafeguard.viewmodel.AttendanceViewModel
 import com.kosd.log_inattendancesafeguard.viewmodel.AuthViewModel
 import com.kosd.log_inattendancesafeguard.viewmodel.BillingViewModel
-import com.kosd.log_inattendancesafeguard.viewmodel.EventViewModel
 import com.kosd.log_inattendancesafeguard.viewmodel.OrganizationViewModel
 import com.kosd.log_inattendancesafeguard.models.Permission
 import androidx.compose.ui.platform.LocalContext
@@ -66,14 +53,9 @@ sealed class Screen(val route: String) {
     object ForgotPassword : Screen("forgot_password")
     object ResetPassword  : Screen("reset_password")
     object Main     : Screen("main")
-    object EventList   : Screen("event_list")
-    object EventCreate : Screen("event_create")
-    object EventDetail : Screen("event_detail/{eventId}")
-    object EventReport : Screen("event_report/{eventId}")
-    object Kiosk       : Screen("kiosk/{eventId}")
 }
 
-// ── Bottom nav items (TEAMS mode only) ───────────────────────────────────────
+// ── Bottom nav items (TEAMS mode) ───────────────────────────────────────────
 sealed class BottomNavItem(
     val route: String,
     val label: String,
@@ -96,7 +78,6 @@ sealed class DrawerItem(
     object Profile      : DrawerItem("profile",       "Profile",       Icons.Default.Person)
     object Members      : DrawerItem("members",       "Members",       Icons.Default.People,    adminOnly = true)
     object Settings     : DrawerItem("settings",      "Settings",      Icons.Default.Settings,  adminOnly = true)
-    object EventStaff   : DrawerItem("event_staff",   "Event Staff",   Icons.Default.Badge,     ownerOnly = true)
 }
 
 // Routes that belong to the TEAMS bottom-nav group
@@ -104,8 +85,7 @@ private val teamsRoutes = setOf(BottomNavItem.Home.route, BottomNavItem.History.
 
 // Routes that are full-screen overlays (no bottom bar, no top bar)
 private val fullScreenRoutes = setOf(
-    "mode_selector", "profile", "members", "settings", "event_staff",
-    "event_create", "event_detail", "event_report", "kiosk"
+    "profile", "members", "settings"
 )
 
 @Composable
@@ -116,7 +96,6 @@ fun ClockCardNavHost() {
     val attendanceViewModel: AttendanceViewModel = viewModel(factory = AttendanceViewModel.Factory())
     val orgViewModel: OrganizationViewModel      = viewModel(factory = OrganizationViewModel.Factory())
     val adminViewModel: AdminViewModel           = viewModel(factory = AdminViewModel.Factory())
-    val eventViewModel: EventViewModel           = viewModel(factory = EventViewModel.Factory())
     val app = LocalContext.current.applicationContext as ClockCardApp
     val billingViewModel: BillingViewModel       = viewModel(factory = BillingViewModel.Factory(app, orgViewModel))
 
@@ -253,7 +232,6 @@ fun ClockCardNavHost() {
                 attendanceViewModel = attendanceViewModel,
                 orgViewModel        = orgViewModel,
                 adminViewModel      = adminViewModel,
-                eventViewModel      = eventViewModel,
                 billingViewModel    = billingViewModel,
                 onLogout = {
                     navController.navigate(Screen.Login.route) {
@@ -265,148 +243,7 @@ fun ClockCardNavHost() {
     }
 }
 
-// ── Bifocal Mode Selector Screen ─────────────────────────────────────────────
-
-@Composable
-fun ModeSelectorScreen(
-    onSelectTeams: () -> Unit,
-    onSelectEvents: () -> Unit,
-    showEvents: Boolean = true,
-    lastMode: String? = null
-) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val wideLayout = maxWidth >= 600.dp
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Column(Modifier.widthIn(max = 840.dp).fillMaxWidth()) {
-                Surface(
-                    shape = MaterialTheme.shapes.medium,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.size(52.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.AccessTimeFilled, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                    }
-                }
-                Spacer(Modifier.height(20.dp))
-                Text("What are you managing?", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    "Choose a workspace. You can switch later from the menu.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(32.dp))
-
-                val teamsCard: @Composable (Modifier) -> Unit = { modifier ->
-                    ModeCard(
-                        icon = Icons.Default.Groups,
-                        eyebrow = "TEAMS",
-                        title = "Team attendance",
-                        subtitle = "Daily check-ins, schedules, attendance history and reports.",
-                        badge = if (lastMode == "teams") "LAST USED" else null,
-                        gradient = Brush.linearGradient(listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(.76f))),
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        modifier = modifier,
-                        onClick = onSelectTeams
-                    )
-                }
-                val eventsCard: @Composable (Modifier) -> Unit = { modifier ->
-                    ModeCard(
-                        icon = Icons.Default.ConfirmationNumber,
-                        eyebrow = "EVENTS",
-                        title = "Event check-ins",
-                        subtitle = "Guest registration, QR check-in, venue access and event reports.",
-                        badge = if (lastMode == "events") "LAST USED" else null,
-                        gradient = Brush.linearGradient(listOf(MaterialTheme.colorScheme.tertiary, MaterialTheme.colorScheme.tertiary.copy(.76f))),
-                        contentColor = MaterialTheme.colorScheme.onTertiary,
-                        modifier = modifier,
-                        onClick = onSelectEvents
-                    )
-                }
-
-                if (wideLayout) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        teamsCard(Modifier.weight(1f))
-                        if (showEvents) eventsCard(Modifier.weight(1f))
-                    }
-                } else {
-                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                        teamsCard(Modifier.fillMaxWidth())
-                        if (showEvents) eventsCard(Modifier.fillMaxWidth())
-                    }
-                }
-                Spacer(Modifier.height(20.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.SwapHoriz, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Switch workspaces any time from the navigation menu", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ModeCard(
-    icon: ImageVector,
-    eyebrow: String,
-    title: String,
-    subtitle: String,
-    badge: String?,
-    gradient: Brush,
-    contentColor: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier
-            .heightIn(min = 176.dp)
-            .pressScale(scaleDown = 0.98f)
-            .semantics {
-                role = Role.Button
-                contentDescription = "Open $title workspace"
-            },
-        shape = MaterialTheme.shapes.large,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(gradient)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = MaterialTheme.shapes.small, color = contentColor.copy(.16f)) {
-                    Icon(icon, null, Modifier.padding(10.dp).size(28.dp), tint = contentColor)
-                }
-                badge?.let {
-                    Surface(shape = MaterialTheme.shapes.extraSmall, color = contentColor.copy(.16f)) {
-                        Text(it, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall, color = contentColor)
-                    }
-                }
-            }
-            Spacer(Modifier.height(20.dp))
-            Text(eyebrow, style = MaterialTheme.typography.labelMedium, color = contentColor.copy(.78f))
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = contentColor)
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(subtitle, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = contentColor.copy(.82f))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, null, tint = contentColor, modifier = Modifier.padding(start = 12.dp).size(22.dp))
-            }
-        }
-    }
-}
-
-// ── Main Screen (hosts both TEAMS and EVENTS modes) ──────────────────────────
+// ── Main Screen (TEAMS mode) ─────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -415,7 +252,6 @@ fun MainScreen(
     attendanceViewModel: AttendanceViewModel,
     orgViewModel: OrganizationViewModel,
     adminViewModel: AdminViewModel,
-    eventViewModel: EventViewModel,
     billingViewModel: BillingViewModel,
     onLogout: () -> Unit
 ) {
@@ -423,12 +259,6 @@ fun MainScreen(
     val isAuthenticated: Boolean = authViewModel.isAuthenticated
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val modePreferences = remember { context.getSharedPreferences("workspace_mode", android.content.Context.MODE_PRIVATE) }
-    val modePreferenceKey = "last_mode_${orgViewModel.activeOrg?.id ?: "default"}"
-    var lastMode by remember(modePreferenceKey) { mutableStateOf(modePreferences.getString(modePreferenceKey, null)) }
-    var forceModeSelector by remember { mutableStateOf(false) }
-    var modeContextReady by remember { mutableStateOf(orgViewModel.activeOrg != null && orgViewModel.activeMembership != null) }
 
     val backStackEntry by innerNav.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -438,7 +268,6 @@ fun MainScreen(
         if (orgViewModel.activeOrg == null || orgViewModel.activeMembership == null) {
             orgViewModel.loadOrganizationsAwait()
         }
-        modeContextReady = true
     }
 
     // Watch for logout
@@ -446,9 +275,7 @@ fun MainScreen(
         if (isAuthenticated == false) onLogout()
     }
 
-    val isAdmin = orgViewModel.isAdminInActiveOrg
-
-    // Bottom nav items (TEAMS mode only)
+    // Bottom nav items (TEAMS mode)
     val bottomItems by remember {
         derivedStateOf {
             buildList {
@@ -468,14 +295,12 @@ fun MainScreen(
                 add(DrawerItem.Profile)
                 if (orgViewModel.can(Permission.MANAGE_MEMBERS)) add(DrawerItem.Members)
                 if (isOwner) add(DrawerItem.Settings)
-                if (isOwner) add(DrawerItem.EventStaff)
             }
         }
     }
 
     val showBottomBar = currentRoute in teamsRoutes
-    val showTopBar = currentRoute != "mode_selector" && currentRoute !in fullScreenRoutes
-    val showBackOnEvents = currentRoute == "events" || currentRoute == "event_list"
+    val showTopBar = currentRoute !in fullScreenRoutes
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -552,22 +377,6 @@ fun MainScreen(
                 }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                // Mode switch + logout at bottom
-                NavigationDrawerItem(
-                    icon = { Icon(Icons.Default.Dashboard, contentDescription = null) },
-                    label = { Text("Switch Mode") },
-                    selected = false,
-                    onClick = {
-                        scope.launch { drawerState.close() }
-                        forceModeSelector = true
-                        innerNav.navigate("mode_selector") {
-                            popUpTo(innerNav.graph.findStartDestination().id) {
-                                inclusive = true
-                            }
-                        }
-                    },
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
                 NavigationDrawerItem(
                     icon = { Icon(Icons.Default.Logout, contentDescription = "Logout") },
                     label = { Text("Logout") },
@@ -587,21 +396,8 @@ fun MainScreen(
                     TopAppBar(
                         title = { Text(titleForRoute(currentRoute)) },
                         navigationIcon = {
-                            if (showBackOnEvents) {
-                                IconButton(onClick = {
-                                    forceModeSelector = true
-                                    innerNav.navigate("mode_selector") {
-                                        popUpTo(innerNav.graph.findStartDestination().id) {
-                                            inclusive = true
-                                        }
-                                    }
-                                }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                                }
-                            } else {
-                                IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Menu")
-                                }
+                            IconButton(onClick = { scope.launch { drawerState.open() } }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
@@ -640,53 +436,9 @@ fun MainScreen(
         ) { paddingValues ->
             NavHost(
                 navController = innerNav,
-                startDestination = "mode_selector",
+                startDestination = BottomNavItem.Home.route,
                 modifier = Modifier.padding(paddingValues)
             ) {
-                // ── Mode Selector ──────────────────────────────────────────────
-                composable("mode_selector") {
-                    val canUseEvents = orgViewModel.isEventStaffInActiveOrg
-                    LaunchedEffect(modeContextReady, canUseEvents, lastMode, forceModeSelector) {
-                        if (!modeContextReady) return@LaunchedEffect
-                        val destination = when {
-                            !canUseEvents -> BottomNavItem.Home.route
-                            !forceModeSelector && lastMode == "teams" -> BottomNavItem.Home.route
-                            !forceModeSelector && lastMode == "events" -> "events"
-                            else -> null
-                        }
-                        destination?.let {
-                            innerNav.navigate(it) {
-                                popUpTo("mode_selector") { inclusive = true }
-                                launchSingleTop = true
-                            }
-                        }
-                    }
-                    if (!modeContextReady) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator()
-                        }
-                    } else ModeSelectorScreen(
-                        showEvents = canUseEvents,
-                        lastMode = lastMode,
-                        onSelectTeams = {
-                            lastMode = "teams"
-                            forceModeSelector = false
-                            modePreferences.edit().putString(modePreferenceKey, "teams").apply()
-                            innerNav.navigate(BottomNavItem.Home.route) {
-                                popUpTo("mode_selector") { inclusive = true }
-                            }
-                        },
-                        onSelectEvents = {
-                            lastMode = "events"
-                            forceModeSelector = false
-                            modePreferences.edit().putString(modePreferenceKey, "events").apply()
-                            innerNav.navigate("events") {
-                                popUpTo("mode_selector") { inclusive = true }
-                            }
-                        }
-                    )
-                }
-
                 // ── TEAMS bottom nav screens ──────────────────────────────────
                 composable(BottomNavItem.Home.route) {
                     HomeScreen(authViewModel, attendanceViewModel, orgViewModel)
@@ -708,44 +460,6 @@ fun MainScreen(
                 composable(DrawerItem.Settings.route) {
                     OrgSettingsScreen(orgViewModel, billingViewModel)
                 }
-                composable(DrawerItem.EventStaff.route) {
-                    EventStaffScreen(orgViewModel)
-                }
-
-                // ── EVENTS mode ───────────────────────────────────────────────
-                composable("events") {
-                    EventListScreen(navController = innerNav, orgViewModel = orgViewModel, eventViewModel = eventViewModel)
-                }
-                composable("event_create") {
-                    EventCreateScreen(navController = innerNav, orgViewModel = orgViewModel, eventViewModel = eventViewModel)
-                }
-                composable("event_detail/{eventId}") { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-                    val event = eventViewModel.events.find { it.id == eventId } ?: eventViewModel.selectedEvent
-                    if (event != null) {
-                        EventDetailScreen(
-                            navController = innerNav,
-                            event = event,
-                            eventViewModel = eventViewModel,
-                            isAdmin = orgViewModel.can(Permission.MANAGE_EVENTS),
-                            isEventStaff = orgViewModel.isEventStaffInActiveOrg
-                        )
-                    }
-                }
-                composable("event_report/{eventId}") { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-                    val event = eventViewModel.events.find { it.id == eventId } ?: eventViewModel.selectedEvent
-                    if (event != null) {
-                        EventReportScreen(navController = innerNav, event = event, eventViewModel = eventViewModel)
-                    }
-                }
-                composable("kiosk/{eventId}") { backStackEntry ->
-                    val eventId = backStackEntry.arguments?.getString("eventId") ?: ""
-                    val event = eventViewModel.events.find { it.id == eventId } ?: eventViewModel.selectedEvent
-                    if (event != null) {
-                        KioskModeScreen(navController = innerNav, event = event, eventViewModel = eventViewModel)
-                    }
-                }
             }
         }
     }
@@ -759,8 +473,6 @@ private fun titleForRoute(route: String?): String {
         DrawerItem.Profile.route    -> "Profile"
         DrawerItem.Members.route    -> "Member Management"
         DrawerItem.Settings.route   -> "Organization Settings"
-        DrawerItem.EventStaff.route -> "Event Staff Management"
-        "events"                    -> "Events"
         else                        -> "ClockCard"
     }
 }
